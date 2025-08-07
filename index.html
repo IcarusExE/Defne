@@ -84,7 +84,10 @@
         const sendButton = document.getElementById('sendButton');
         const userIdDisplay = document.getElementById('userIdDisplay');
         let welcomeMessage = document.getElementById('welcomeMessage');
-        
+
+        // Defne'nin profil fotoğrafı için URL. Kendi görselinizle değiştirin.
+        const defne_avatar_url = 'https://i.ibb.co/5c1s8gH/defne-avatar.png'; // Örnek URL
+
         // --- VDS'teki backend API'nizin tam URL'sini belirtin ---
         const API_BASE_URL = 'https://94.154.32.107:5000';
         
@@ -95,15 +98,15 @@
         }
         userIdDisplay.textContent = userId;
 
-        const addMessage = (content, sender, type = 'text') => {
+        const addMessage = (content, sender) => {
             if (welcomeMessage) {
                 welcomeMessage.remove();
                 welcomeMessage = null;
             }
             const messageDiv = document.createElement('div');
-            messageDiv.className = `flex ${sender === 'user' ? 'justify-end' : 'justify-start'}`;
+            messageDiv.className = `flex gap-3 items-start ${sender === 'user' ? 'justify-end' : 'justify-start'}`;
             
-            messageDiv.innerHTML = `
+            const messageBubble = `
                 <div class="p-3 rounded-xl max-w-[75%] break-words ${
                     sender === 'user'
                         ? 'bg-purple-500 text-white shadow-md'
@@ -112,6 +115,19 @@
                     ${content}
                 </div>
             `;
+            
+            const avatarHtml = `
+                <div class="w-10 h-10 rounded-full overflow-hidden flex-shrink-0">
+                    <img src="${defne_avatar_url}" alt="Defne'nin Fotoğrafı" class="object-cover w-full h-full">
+                </div>
+            `;
+
+            if (sender === 'user') {
+                messageDiv.innerHTML = messageBubble;
+            } else {
+                messageDiv.innerHTML = avatarHtml + messageBubble;
+            }
+
             messagesContainer.appendChild(messageDiv);
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
             return messageDiv;
@@ -121,17 +137,22 @@
             sendButton.disabled = true;
             messageInput.disabled = true;
             
-            addMessage(messageContent, 'user', 'text');
+            addMessage(messageContent, 'user');
             messageInput.value = '';
             
             const typingIndicatorContainer = document.createElement('div');
-            typingIndicatorContainer.className = 'flex justify-start';
+            typingIndicatorContainer.className = 'flex gap-3 items-start justify-start';
+            const avatarHtml = `
+                <div class="w-10 h-10 rounded-full overflow-hidden flex-shrink-0">
+                    <img src="${defne_avatar_url}" alt="Defne'nin Fotoğrafı" class="object-cover w-full h-full">
+                </div>
+            `;
             const typingIndicator = document.createElement('div');
             typingIndicator.className = 'p-3 rounded-xl bg-white dark:bg-gray-800 shadow-md typing-indicator';
             typingIndicator.innerHTML = `
                 <span>.</span><span>.</span><span>.</span>
             `;
-            typingIndicatorContainer.appendChild(typingIndicator);
+            typingIndicatorContainer.innerHTML = avatarHtml + typingIndicator.outerHTML;
             messagesContainer.appendChild(typingIndicatorContainer);
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
 

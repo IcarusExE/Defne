@@ -110,20 +110,21 @@
                 welcomeMessage.remove();
                 welcomeMessage = null;
             }
-            const messageDiv = document.createElement('div');
-            messageDiv.className = `flex gap-3 items-start ${sender === 'user' ? 'justify-end' : 'justify-start'}`;
-            
-            const messageBubble = `
-                <div class="p-3 rounded-xl max-w-[75%] break-words ${
-                    sender === 'user'
-                        ? 'bg-purple-500 text-white shadow-md'
-                        : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-md'
-                }">
-                    ${content}
-                </div>
-            `;
 
-            messagesContainer.appendChild(messageBubble);
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `flex ${sender === 'user' ? 'justify-end' : 'justify-start'}`;
+            
+            const messageBubble = document.createElement('div');
+            messageBubble.className = `p-3 rounded-xl max-w-[75%] break-words ${
+                sender === 'user'
+                    ? 'bg-purple-500 text-white shadow-md'
+                    : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-md'
+            }`;
+            messageBubble.innerHTML = content;
+            
+            messageDiv.appendChild(messageBubble);
+
+            messagesContainer.appendChild(messageDiv);
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
             return messageDiv;
         };
@@ -136,12 +137,12 @@
             messageInput.value = '';
             
             const typingIndicatorContainer = document.createElement('div');
-            typingIndicatorContainer.className = 'flex gap-3 items-start justify-start';
+            typingIndicatorContainer.className = 'flex justify-start';
             const typingIndicator = document.createElement('div');
             typingIndicator.className = 'p-3 rounded-xl bg-white dark:bg-gray-800 shadow-md typing-indicator';
-            typingIndicator.innerHTML = `
-                <span>.</span><span>.</span><span>.</span>
-            `;
+            typingIndicator.innerHTML = `<span>.</span><span>.</span><span>.</span>`;
+            
+            typingIndicatorContainer.appendChild(typingIndicator);
             messagesContainer.appendChild(typingIndicatorContainer);
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
 

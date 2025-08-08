@@ -7,44 +7,54 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap');
-        body {
-            font-family: 'Inter', sans-serif;
-        }
-        .scrollbar-hide::-webkit-scrollbar {
-            display: none;
-        }
-        .scrollbar-hide {
-            -ms-overflow-style: none; /* IE and Edge */
-            scrollbar-width: none; /* Firefox */
-        }
-        /* Typing animation styles */
-        .typing-indicator span {
-            animation: typing 1s infinite;
-        }
-        .typing-indicator span:nth-child(1) {
-            animation-delay: 0s;
-        }
-        .typing-indicator span:nth-child(2) {
-            animation-delay: 0.2s;
-        }
-        .typing-indicator span:nth-child(3) {
-            animation-delay: 0.4s;
-        }
+        body { font-family: 'Inter', sans-serif; }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+        .typing-indicator span { animation: typing 1s infinite; }
+        .typing-indicator span:nth-child(1) { animation-delay: 0s; }
+        .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
         @keyframes typing {
-            0% {
-                opacity: 0.2;
-            }
-            50% {
-                opacity: 1;
-            }
-            100% {
-                opacity: 0.2;
-            }
+            0% { opacity: 0.2; }
+            50% { opacity: 1; }
+            100% { opacity: 0.2; }
+        }
+        /* Modal overlay */
+        .modal-overlay {
+            visibility: hidden;
+            opacity: 0;
+            transition: visibility 0s, opacity 0.3s linear;
+        }
+        .modal-overlay.visible {
+            visibility: visible;
+            opacity: 1;
         }
     </style>
 </head>
 <body class="h-full bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-white">
-    <div id="app" class="flex flex-col h-screen rounded-lg overflow-hidden max-w-4xl mx-auto shadow-2xl">
+    <div id="authModal" class="modal-overlay fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50">
+        <div class="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-2xl w-full max-w-sm">
+            <h1 class="text-3xl font-bold mb-6 text-center text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-purple-600">Defne Sohbet</h1>
+            
+            <form id="authForm" class="space-y-4">
+                <div>
+                    <label for="username" class="block text-sm font-medium text-gray-700 dark:text-gray-300">İsim</label>
+                    <input type="text" id="username" required class="mt-1 p-2 w-full rounded-md border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-purple-500 focus:border-purple-500">
+                </div>
+                <div>
+                    <label for="password" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Şifre</label>
+                    <input type="password" id="password" required class="mt-1 p-2 w-full rounded-md border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-purple-500 focus:border-purple-500">
+                </div>
+                <p id="error-message" class="text-sm text-red-500 text-center"></p>
+                <button type="submit" id="submitButton" class="w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 transition-all">Giriş Yap</button>
+                <p class="mt-4 text-center text-sm text-gray-600 dark:text-gray-400">
+                    Hesabın yok mu? <a href="#" id="toggleAuth" class="font-medium text-purple-600 hover:text-purple-500">Kayıt Ol</a>
+                </p>
+            </form>
+        </div>
+    </div>
+
+    <div id="app" class="flex flex-col h-screen rounded-lg overflow-hidden max-w-4xl mx-auto shadow-2xl" style="display:none;">
         <header class="p-4 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm flex items-center justify-between">
             <div class="flex items-center gap-3">
                 <div class="w-10 h-10 rounded-full overflow-hidden flex-shrink-0">
@@ -52,9 +62,9 @@
                 </div>
                 <h1 class="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-purple-600">Defne Sohbet</h1>
             </div>
-            <div class="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-2">
-                <span class="font-bold">Kullanıcı ID:</span>
-                <span id="userIdDisplay" class="font-mono text-xs truncate max-w-[150px]"></span>
+            <div class="flex items-center gap-2">
+                <span id="userIdDisplay" class="text-sm text-gray-500 dark:text-gray-400 font-bold"></span>
+                <button id="logoutButton" class="text-sm text-red-500 hover:text-red-600">Çıkış Yap</button>
             </div>
         </header>
 
@@ -84,36 +94,105 @@
     </div>
 
     <script>
+        // ÖNEMLİ: Kendi VDS IP adresinizi buraya yazın.
+        const VDS_IP_ADRESINIZ = '94.154.32.107'; 
+        const API_BASE_URL = `https://${VDS_IP_ADRESINIZ}:5000`;
+        
+        const authModal = document.getElementById('authModal');
+        const authForm = document.getElementById('authForm');
+        const usernameInput = document.getElementById('username');
+        const passwordInput = document.getElementById('password');
+        const submitButton = document.getElementById('submitButton');
+        const toggleAuthButton = document.getElementById('toggleAuth');
+        const errorMessage = document.getElementById('error-message');
+
+        const appContainer = document.getElementById('app');
         const messagesContainer = document.getElementById('messagesContainer');
         const messageInput = document.getElementById('messageInput');
         const sendButton = document.getElementById('sendButton');
+        const logoutButton = document.getElementById('logoutButton');
         const userIdDisplay = document.getElementById('userIdDisplay');
         let welcomeMessage = document.getElementById('welcomeMessage');
 
-        // Defne'nin profil fotoğrafı için URL
-        const defne_avatar_url = 'https://94.154.32.107/profile.png';
-        // Kullanıcının profil fotoğrafı için SVG ikonu
-        const user_avatar_svg = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-user"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`;
+        let isLogin = true;
 
-        // --- VDS'teki backend API'nizin tam URL'sini belirtin ---
-        const API_BASE_URL = 'https://94.154.32.107:5000';
-        
-        let userId = localStorage.getItem('chatUserId');
-        if (!userId) {
-            userId = 'user-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
-            localStorage.setItem('chatUserId', userId);
-        }
-        userIdDisplay.textContent = userId;
+        toggleAuthButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            isLogin = !isLogin;
+            toggleAuthButton.textContent = isLogin ? 'Kayıt Ol' : 'Giriş Yap';
+            submitButton.textContent = isLogin ? 'Giriş Yap' : 'Kayıt Ol';
+            errorMessage.textContent = '';
+        });
+
+        authForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            errorMessage.textContent = '';
+            const username = usernameInput.value;
+            const password = passwordInput.value;
+            
+            const endpoint = isLogin ? 'login' : 'register';
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/${endpoint}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'İşlem sırasında bir hata oluştu.');
+                }
+                
+                if (isLogin) {
+                    localStorage.setItem('sessionToken', data.token);
+                    localStorage.setItem('userId', data.user_id);
+                    checkAuthStatus();
+                } else {
+                    alert('Kayıt başarılı. Şimdi giriş yapabilirsiniz.');
+                    isLogin = true;
+                    toggleAuthButton.textContent = 'Kayıt Ol';
+                    submitButton.textContent = 'Giriş Yap';
+                    usernameInput.value = '';
+                    passwordInput.value = '';
+                }
+
+            } catch (error) {
+                console.error(error);
+                errorMessage.textContent = `Hata: ${error.message}`;
+            }
+        });
+
+        logoutButton.addEventListener('click', () => {
+            localStorage.removeItem('sessionToken');
+            localStorage.removeItem('userId');
+            checkAuthStatus();
+            messagesContainer.innerHTML = `<div id="welcomeMessage" class="text-center text-gray-500 dark:text-gray-400 mt-12"><p class="text-lg">Henüz hiç mesajınız yok. Hadi sohbete başlayalım!</p></div>`;
+            welcomeMessage = document.getElementById('welcomeMessage');
+        });
+
+        const checkAuthStatus = () => {
+            const token = localStorage.getItem('sessionToken');
+            const userId = localStorage.getItem('userId');
+            if (token && userId) {
+                authModal.classList.remove('visible');
+                appContainer.style.display = 'flex';
+                userIdDisplay.textContent = `Kullanıcı: ${userId}`;
+                fetchChatHistory();
+            } else {
+                appContainer.style.display = 'none';
+                authModal.classList.add('visible');
+            }
+        };
 
         const addMessage = (content, sender) => {
             if (welcomeMessage) {
                 welcomeMessage.remove();
                 welcomeMessage = null;
             }
-
             const messageDiv = document.createElement('div');
             messageDiv.className = `flex ${sender === 'user' ? 'justify-end' : 'justify-start'}`;
-            
             const messageBubble = document.createElement('div');
             messageBubble.className = `p-3 rounded-xl max-w-[75%] break-words ${
                 sender === 'user'
@@ -121,15 +200,20 @@
                     : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-md'
             }`;
             messageBubble.innerHTML = content;
-            
             messageDiv.appendChild(messageBubble);
-
             messagesContainer.appendChild(messageDiv);
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
             return messageDiv;
         };
 
         const sendMessage = async (messageContent) => {
+            const token = localStorage.getItem('sessionToken');
+            if (!token) {
+                alert('Oturumunuz sona erdi. Lütfen tekrar giriş yapın.');
+                checkAuthStatus();
+                return;
+            }
+
             sendButton.disabled = true;
             messageInput.disabled = true;
             
@@ -141,7 +225,6 @@
             const typingIndicator = document.createElement('div');
             typingIndicator.className = 'p-3 rounded-xl bg-white dark:bg-gray-800 shadow-md typing-indicator';
             typingIndicator.innerHTML = `<span>.</span><span>.</span><span>.</span>`;
-            
             typingIndicatorContainer.appendChild(typingIndicator);
             messagesContainer.appendChild(typingIndicatorContainer);
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
@@ -149,8 +232,11 @@
             try {
                 const response = await fetch(`${API_BASE_URL}/chat`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ userId: userId, message: messageContent })
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ message: messageContent })
                 });
 
                 if (!response.ok) {
@@ -170,6 +256,10 @@
                 console.error('Hata:', error);
                 typingIndicatorContainer.remove();
                 addMessage(`Hata oluştu: ${error.message}`, 'model');
+                if (error.message.includes('token')) {
+                    alert('Oturumunuz sona erdi veya geçersiz. Lütfen tekrar giriş yapın.');
+                    checkAuthStatus();
+                }
             } finally {
                 sendButton.disabled = false;
                 messageInput.disabled = false;
@@ -193,8 +283,14 @@
         });
         
         const fetchChatHistory = async () => {
+            const token = localStorage.getItem('sessionToken');
+            if (!token) return;
+
             try {
-                const response = await fetch(`${API_BASE_URL}/get_history?userId=${userId}`);
+                const response = await fetch(`${API_BASE_URL}/get_history`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
                 if (!response.ok) {
                     throw new Error('Sohbet geçmişi yüklenirken sunucu hatası oluştu.');
                 }
@@ -211,11 +307,14 @@
                 }
             } catch (error) {
                 console.error('Sohbet geçmişi yüklenirken hata:', error);
+                if (error.message.includes('token')) {
+                    alert('Oturumunuz sona erdi. Lütfen tekrar giriş yapın.');
+                    checkAuthStatus();
+                }
             }
         };
 
-        window.addEventListener('load', fetchChatHistory);
+        window.addEventListener('load', checkAuthStatus);
     </script>
 </body>
 </html>
-
